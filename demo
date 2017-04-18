@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# Pre-flight check
+if [[ -z "$DO_TOKEN" ]]; then
+  echo "Please set DO_TOKEN with your DigitalOcean API token."
+  exit 1
+fi
+
+STEP="$1"
+echo "Demo step $STEP"
+
+# DigitalOcean API token
+DO_TOKEN="87c27d43f0f071b9f48efefb18278f13bee5ed16986fb60fe51c367b4d7d668b"
+# Colors
+ESC_SEQ="\x1b["
+COL_RESET=$ESC_SEQ"39;49;00m"
+COL_RED=$ESC_SEQ"31;01m"
+COL_GREEN=$ESC_SEQ"32;01m"
+COL_YELLOW=$ESC_SEQ"33;01m"
+COL_BLUE=$ESC_SEQ"34;01m"
+COL_MAGENTA=$ESC_SEQ"35;01m"
+COL_CYAN=$ESC_SEQ"36;01m"
+
+case "$STEP" in
+  1)
+    CMD="
+    kontena digitalocean master create \
+      --name kontena-demo \
+      --token $DO_TOKEN \
+      --region lon1 \
+      --ssh-key ~/.ssh/id_rsa.pub \
+      --size 1gb \
+      --skip-auth-provider
+    "
+    ;;
+  2)
+    CMD="
+    kontena grid create --initial-size 2 demo-grid && \
+    kontena grid use demo-grid
+    "
+    ;;
+  3)
+    CMD="
+    kontena digitalocean node create \
+      --token $DO_TOKEN \
+      --channel stable \
+      --ssh-key ~/.ssh/id_rsa.pub \
+      --size 1gb \
+      --region lon1 \
+      --count 1 \
+      kontena-demo-node1 &&
+    kontena digitalocean node create \
+      --token $DO_TOKEN \
+      --channel stable \
+      --ssh-key ~/.ssh/id_rsa.pub \
+      --size 1gb \
+      --region lon1 \
+      --count 1 \
+      kontena-demo-node2
+    "
+    ;;
+  4)
+    CMD='kontena node list'
+    ;;
+  5)
+    CMD="
+    kontena service create -p 80:80 nginx nginx:latest && \
+    kontena service list
+    "
+    ;;
+  6)
+    CMD="kontena service deploy nginx"
+    ;;
+  7)
+    CMD="kontena service show nginx"
+    ;;
+  8)
+    CMD='
+    kontena service show nginx | grep "public ip"
+    '
+    ;;
+  9)
+    CMD='
+    kontena service scale nginx 2 &&
+      kontena service show nginx
+    '
+    ;;
+  10)
+    CMD='
+    kontena service stop nginx &&
+      kontena service rm --force nginx &&
+      kontena service list
+    '
+    ;;
+  11)
+    CMD='
+    kontena stack install --deploy --name drupal kontena.yml
+    '
+    ;;
+  12)
+    CMD='
+    kontena service list
+    '
+    ;;
+  13)
+    CMD='
+    kontena service show drupal/drupal_lb | grep "public ip"
+    '
+    ;;
+  14)
+    CMD="
+    kontena stack rm --force drupal ; kontena service list
+    "
+    ;;
+  99)
+    CMD="
+    kontena digitalocean node terminate --force --token $DO_TOKEN kontena-demo-node1 &&
+      kontena digitalocean node terminate --force --token $DO_TOKEN kontena-demo-node2 &&
+      kontena digitalocean master terminate --force --token $DO_TOKEN kontena-demo
+    "
+    ;;
+  *)
+    CMD="echo Unknown step ID"
+    ;;
+esac
+
+clear
+echo ----------------------------------------
+echo Executing:
+echo -e $COL_MAGENTA
+echo $CMD | fold -s
+echo -e $COL_RESET
+echo ----------------------------------------
+echo
+
+bash -c "$CMD"
+echo

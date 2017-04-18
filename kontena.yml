@@ -1,0 +1,59 @@
+stack: examples/drupal
+version: 1.0.0
+
+variables:
+  drupal-mysql-root:
+    type: string
+    from:
+      vault: drupal-mysql-root
+      random_string: 32
+    to:
+      vault: drupal-mysql-root
+  drupal-mysql-password:
+    type: string
+    from:
+      vault: drupal-mysql-password
+      random_string: 32
+    to:
+      vault: drupal-mysql-password
+
+services:
+  drupal_lb:
+    image: kontena/lb:latest
+    ports:
+      - 80:80
+    deploy:
+      strategy: daemon
+  drupal:
+    image: drupal:8.2
+    instances: 2
+    environment:
+      MYSQL_USER: drupal
+      KONTENA_LB_MODE: http
+      KONTENA_LB_BALANCE: roundrobin
+      KONTENA_LB_INTERNAL_PORT: 80
+    links:
+      - drupal_lb
+    secrets:
+      - secret: drupal-mysql-password
+        name: MYSQL_PASSWORD
+        type: env
+    stateful: true
+    volumes:
+      - /var/www/html/modules
+      - /var/www/html/profiles
+      - /var/www/html/themes
+      - /var/www/html/sites
+  mysql:
+    image: mysql:5.6
+    stateful: true
+    environment:
+      MYSQL_DATABASE: drupal
+      MYSQL_USER: drupal
+    secrets:
+      - secret: drupal-mysql-root
+        name: MYSQL_ROOT_PASSWORD
+        type: env
+      - secret: drupal-mysql-password
+        name: MYSQL_PASSWORD
+        type: env
