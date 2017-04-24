@@ -9,8 +9,6 @@ fi
 STEP="$1"
 echo "Demo step $STEP"
 
-# DigitalOcean API token
-DO_TOKEN="87c27d43f0f071b9f48efefb18278f13bee5ed16986fb60fe51c367b4d7d668b"
 # Colors
 ESC_SEQ="\x1b["
 COL_RESET=$ESC_SEQ"39;49;00m"
